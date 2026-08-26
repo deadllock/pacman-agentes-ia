@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pac-Man — Agentes Inteligentes</title>
+<style>
+  :root {
+    --bg: #050510;
+    --panel: #0d1024;
+    --panel2: #151a36;
+    --text: #f4f4ff;
+    --muted: #aab0d5;
+    --accent: #ffd84d;
+    --cyan: #50e3ff;
+    --danger: #ff4f68;
+    --pink: #ff7bc8;
+    --line: #2a356a;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top, #11183a 0%, #070817 38%, #030309 100%);
+    color: var(--text);
+    font-family: "Courier New", Courier, monospace;
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .app {
+    width: min(1120px, 100%);
+  }
+
+  .title {
+    margin: 0 0 8px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-shadow: 0 0 12px rgba(255,216,77,.35);
+  }
+
+  .subtitle {
+    color: var(--muted);
+    margin: 0 0 18px;
+    line-height: 1.45;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 640px minmax(300px, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .game-card,
+  .panel {
+    background: rgba(13,16,36,.96);
+    border: 1px solid var(--line);
+    box-shadow: 0 14px 40px rgba(0,0,0,.35);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .game-card {
+    width: 640px;
+  }
+
+  canvas {
+    display: block;
+    width: 640px;
+    height: 480px;
+    background: #02020a;
+    image-rendering: pixelated;
+  }
+
+  .controls {
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    border-top: 1px solid var(--line);
+  }
+
+  .controls-left {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  select,
+  button {
+    font: inherit;
+    color: var(--text);
+    background: var(--panel2);
+    border: 1px solid #3a4788;
+    border-radius: 8px;
+    padding: 9px 11px;
+  }
+
+  button {
+    cursor: pointer;
+    font-weight: 700;
+    transition: transform .12s ease, border-color .12s ease;
+  }
+
+  button:hover {
+    transform: translateY(-1px);
+    border-color: var(--cyan);
+  }
+
+  button.primary {
+    color: #151000;
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  button.experiment {
+    color: #00151a;
+    background: var(--cyan);
+    border-color: var(--cyan);
+  }
+
+  .panel {
+    padding: 14px;
+    min-height: 560px;
+  }
+
+  .panel h2,
+  .panel h3 {
+    margin-top: 0;
+  }
+
+  .panel h2 {
+    color: var(--cyan);
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+
+  .section {
+    border: 1px solid var(--line);
+    background: #080b1a;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .section-title {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font: 12px/1.45 "Courier New", Courier, monospace;
+    color: #e9ecff;
+  }
+
+  .action {
+    display: inline-block;
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: #212b57;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+  }
+
+  .results {
+    margin-top: 18px;
+    background: rgba(13,16,36,.96);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  .results h2 {
+    margin: 0 0 8px;
+    color: var(--accent);
+    font-size: 18px;
+  }
+
+  .results p {
+    color: var(--muted);
+    margin-top: 0;
+    line-height: 1.45;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+
+  th, td {
+    border: 1px solid var(--line);
+    padding: 8px;
+    text-align: center;
+  }
+
+  th {
+    background: #18204a;
+    color: var(--cyan);
+  }
+
+  td:first-child {
+    text-align: left;
+    font-weight: 700;
+  }
+
+  .status {
+    color: var(--muted);
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+  .trace-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 11px;
+    color: #d7dcff;
+    line-height: 1.5;
+  }
+
+  .trace-list li { margin-bottom: 4px; }
+
+  @media (max-width: 1020px) {
+    body { padding: 12px; }
+    .layout { grid-template-columns: 1fr; }
+    .game-card { width: 100%; overflow-x: auto; }
+    .panel { min-height: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="layout">
+    <div class="game-card">
+      <canvas id="game" width="640" height="480"></canvas>
+
+      <div class="controls">
+        <div class="controls-left">
+          <label for="mode">Modo:</label>
+          <select id="mode">
+            <option value="manual">Manual</option>
+            <option value="reflejo">Fantasmas: reflejo</option>
+            <option value="modelo">Fantasmas: basado en modelo</option>
+            <option value="duelo">Pac-Man reflejo VS fantasmas modelo</option>
+            <option value="objetivos">Pac-Man objetivos VS fantasmas modelo</option>
+            <option value="utilidad">Pac-Man utilidad VS fantasmas modelo</option>
+          </select>
+
+          <label for="speed">Velocidad:</label>
+          <select id="speed">
+            <option value="lenta">Lenta</option>
+            <option value="normal" selected>Normal</option>
+            <option value="rapida">Rápida</option>
+            <option value="turbo">Turbo</option>
+          </select>
+
+          <label for="difficulty">Dificultad:</label>
+          <select id="difficulty">
+            <option value="1">Fácil · 1 fantasma</option>
+            <option value="2" selected>Normal · 2 fantasmas</option>
+            <option value="3">Difícil · 3 fantasmas</option>
+            <option value="4">Experto · 4 fantasmas</option>
+          </select>
+
+          <button id="startBtn" class="primary">Iniciar / Reiniciar</button>
+        </div>
+        <button id="experimentBtn" class="experiment">Ejecutar 20 partidas</button>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <h2>Panel de estado del agente</h2>
+
+      <div class="section">
+        <div class="section-title">Percepción actual</div>
+        <pre id="perception">Modo manual: no hay agente activo.</pre>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Estado interno</div>
+        <pre id="internalState">No aplica.</pre>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Acción elegida</div>
+        <span id="action" class="action">NINGUNA</span>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Últimas 5 decisiones</div>
+        <ol id="trace" class="trace-list">
+          <li>Sin decisiones todavía.</li>
+        </ol>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Configuración de partida</div>
+        <pre id="gameStats">Velocidad: normal · Dificultad: normal · 2 fantasmas</pre>
+      </div>
+
+      <div class="legend" id="legend">
+        <span><i class="dot" style="background:#ffd84d"></i>Pac-Man</span>
+        <span><i class="dot" style="background:#ff4f68"></i>Fantasma 1</span>
+        <span><i class="dot" style="background:#ff7bc8"></i>Fantasma 2</span>
+        <span><i class="dot" style="background:#ff3355"></i>Cereza / poder</span>
+      </div>
+
+      <p class="status" id="modeHelp">
+        Manual: usa las flechas. Las cerezas activan el poder temporal para comer fantasmas.
+      </p>
+    </aside>
+  </div>
+
+  <section class="results">
+    <h2>Experimentación acelerada</h2>
+    <p>
+      Cada agente se evalúa en 20 partidas con el mismo laberinto y la misma política
+      automática de evasión para Pac-Man. Un fantasma mejor debería capturarlo antes,
+      reduciendo su puntaje y su tiempo de supervivencia.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Agente</th>
+          <th>Partidas</th>
+          <th>Puntaje promedio de Pac-Man</th>
+          <th>Desviación estándar</th>
+          <th>Supervivencia promedio (s)</th>
+          <th>Capturas</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody">
+        <tr>
+          <td colspan="6">Todavía no se ha ejecutado el experimento.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div id="experimentStatus" class="status"></div>
+  </section>
+</div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   1. CONFIGURACIÓN GENERAL DEL JUEGO
+   ========================================================= */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const modeSelect = document.getElementById("mode");
+const speedSelect = document.getElementById("speed");
+const difficultySelect = document.getElementById("difficulty");
+const startBtn = document.getElementById("startBtn");
+const experimentBtn = document.getElementById("experimentBtn");
+const perceptionEl = document.getElementById("perception");
+const internalStateEl = document.getElementById("internalState");
+const actionEl = document.getElementById("action");
+const traceEl = document.getElementById("trace");
+const modeHelpEl = document.getElementById("modeHelp");
+const gameStatsEl = document.getElementById("gameStats");
+const legendEl = document.getElementById("legend");
+const resultsBody = document.getElementById("resultsBody");
+const experimentStatus = document.getElementById("experimentStatus");
+
+const CELL = 32;
+const COLS = 20;
+const ROWS = 15;
+const POWER_DURATION_MS = 8000;
+const GHOST_EAT_SCORE = 200;
+const CHERRY_SCORE = 50;
+
+// 20 columnas x 15 filas = 640 x 480.
+const MAZE = [
+  "####################",
+  "#........##........#",
+  "#.####.#.##.#.####.#",
+  "#..................#",
+  "#.##.###.##.###.##.#",
+  "#....#........#....#",
+  "####.#.######.#.####",
+  "#......#....#......#",
+  "#.####.#.##.#.####.#",
+  "#..................#",
+  "#.##.###.##.###.##.#",
+  "#....#........#....#",
+  "#.######.##.######.#",
+  "#..................#",
+  "####################"
+];
+
+const DIRS = {
+  ARRIBA:    { x: 0,  y: -1 },
+  ABAJO:     { x: 0,  y: 1  },
+  IZQUIERDA: { x: -1, y: 0  },
+  DERECHA:   { x: 1,  y: 0  },
+  NINGUNA:   { x: 0,  y: 0  }
+};
+
+const DIR_ORDER = ["ARRIBA", "IZQUIERDA", "ABAJO", "DERECHA"];
+const OPPOSITE = {
+  ARRIBA: "ABAJO",
+  ABAJO: "ARRIBA",
+  IZQUIERDA: "DERECHA",
+  DERECHA: "IZQUIERDA",
+  NINGUNA: "NINGUNA"
+};
+
+const SPEEDS = {
+  lenta:  { pac: 185, ghost: 235, label: "Lenta" },
+  normal: { pac: 130, ghost: 175, label: "Normal" },
+  rapida: { pac: 95,  ghost: 130, label: "Rápida" },
+  turbo:  { pac: 70,  ghost: 95,  label: "Turbo" }
+};
+
+const DIFFICULTIES = {
+  1: { label: "Fácil", ghosts: 1 },
+  2: { label: "Normal", ghosts: 2 },
+  3: { label: "Difícil", ghosts: 3 },
+  4: { label: "Experto", ghosts: 4 }
+};
+
+const GHOST_HOMES = [
+  { x: 18, y: 13 },
+  { x: 18, y: 1 },
+  { x: 1, y: 13 },
+  { x: 1, y: 9 }
+];
+
+const CHERRY_POSITIONS = [
+  { x: 3, y: 3 },
+  { x: 16, y: 11 }
+];
+
+let mode = "manual";
+let gamePhase = "START"; // START | RUNNING | GAMEOVER
+let gameOverMessage = "";
+let speedKey = "normal";
+let difficulty = 2;
+
+let pacman;
+let ghosts = [];
+let pellets;
+let cherries;
+let score;
+let startTime;
+let survivalSeconds;
+let powerUntil = 0;
+let ghostsEatenDuringPower = 0;
+
+let pacAccumulator = 0;
+let ghostAccumulator = 0;
+let lastFrame = performance.now();
+
+let modelStates = [];
+let lastPerceptionText = "";
+let lastAction = "NINGUNA";
+let lastStateText = "No aplica.";
+let lastPacmanStateText = "";
+let decisionTrace = [];
+
+/* =========================================================
+   2. FUNCIONES BÁSICAS DEL MUNDO
+   ========================================================= */
+
+function isWalkable(x, y) {
+  return (
+    y >= 0 && y < ROWS &&
+    x >= 0 && x < COLS &&
+    MAZE[y][x] !== "#"
+  );
+}
+
+function keyOf(x, y) {
+  return `${x},${y}`;
+}
+
+function sameCell(a, b) {
+  return a.x === b.x && a.y === b.y;
+}
+
+function createPellets() {
+  const set = new Set();
+
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (isWalkable(x, y)) set.add(keyOf(x, y));
+    }
+  }
+
+  set.delete(keyOf(1, 1));
+  for (const home of GHOST_HOMES) set.delete(keyOf(home.x, home.y));
+  for (const cherry of CHERRY_POSITIONS) set.delete(keyOf(cherry.x, cherry.y));
+  return set;
+}
+
+function createCherries() {
+  return new Set(CHERRY_POSITIONS.map(c => keyOf(c.x, c.y)));
+}
+
+function initialModelState() {
+  return {
+    posicionAnteriorPacman: null,
+    direccionPreviaPacman: "NINGUNA",
+    objetivoPredicho: null,
+    modoHuida: false
+  };
+}
+
+function getLegalActions(entity) {
+  return DIR_ORDER.filter(dir => {
+    const v = DIRS[dir];
+    return isWalkable(entity.x + v.x, entity.y + v.y);
+  });
+}
+
+function moveEntity(entity, dir) {
+  const v = DIRS[dir] || DIRS.NINGUNA;
+  const nx = entity.x + v.x;
+  const ny = entity.y + v.y;
+
+  if (isWalkable(nx, ny)) {
+    entity.x = nx;
+    entity.y = ny;
+    entity.dir = dir;
+    return true;
+  }
+  return false;
+}
+
+function currentSpeed() {
+  return SPEEDS[speedKey] || SPEEDS.normal;
+}
+
+function isPowerActive() {
+  return gamePhase === "RUNNING" && performance.now() < powerUntil;
+}
+
+function powerSecondsRemaining() {
+  if (!isPowerActive()) return 0;
+  return Math.max(0, (powerUntil - performance.now()) / 1000);
+}
+
+function resetGame(keepPhase = false) {
+  pacman = { x: 1, y: 1, dir: "NINGUNA", nextDir: "NINGUNA" };
+
+  const count = DIFFICULTIES[difficulty].ghosts;
+  ghosts = Array.from({ length: count }, (_, i) => ({
+    id: i + 1,
+    x: GHOST_HOMES[i].x,
+    y: GHOST_HOMES[i].y,
+    homeX: GHOST_HOMES[i].x,
+    homeY: GHOST_HOMES[i].y,
+    dir: "NINGUNA"
+  }));
+
+  modelStates = ghosts.map(() => initialModelState());
+  pellets = createPellets();
+  cherries = createCherries();
+  score = 0;
+  survivalSeconds = 0;
+  powerUntil = 0;
+  ghostsEatenDuringPower = 0;
+  pacAccumulator = 0;
+  ghostAccumulator = 0;
+  lastPerceptionText = "";
+  lastAction = "NINGUNA";
+  lastStateText = "No aplica.";
+  lastPacmanStateText = "";
+  decisionTrace = [];
+
+  if (!keepPhase) {
+    gamePhase = "START";
+    gameOverMessage = "";
+  }
+
+  updatePanelForMode();
+}
+
+function startGame() {
+  resetGame(true);
+  gamePhase = "RUNNING";
+  gameOverMessage = "";
+  startTime = performance.now();
+}
+
+function finishGame(message) {
+  if (gamePhase !== "RUNNING") return;
+  survivalSeconds = (performance.now() - startTime) / 1000;
+  gamePhase = "GAMEOVER";
+  gameOverMessage = message;
+}
+
+function collectItems() {
+  const k = keyOf(pacman.x, pacman.y);
+
+  if (pellets.has(k)) {
+    pellets.delete(k);
+    score += 10;
+  }
+
+  if (cherries.has(k)) {
+    cherries.delete(k);
+    score += CHERRY_SCORE;
+    powerUntil = performance.now() + POWER_DURATION_MS;
+    ghostsEatenDuringPower = 0;
+    pushTrace("CEREZA: poder activado durante 8 segundos");
+  }
+
+  if (pellets.size === 0) {
+    finishGame("¡LIMPIASTE EL LABERINTO!");
+  }
+}
+
+function respawnGhost(index) {
+  const g = ghosts[index];
+  if (!g) return;
+  g.x = g.homeX;
+  g.y = g.homeY;
+  g.dir = "NINGUNA";
+  modelStates[index] = initialModelState();
+}
+
+function handleGhostCollisions() {
+  let collision = false;
+
+  ghosts.forEach((g, index) => {
+    if (!sameCell(pacman, g)) return;
+    collision = true;
+
+    if (isPowerActive()) {
+      ghostsEatenDuringPower += 1;
+      score += GHOST_EAT_SCORE * ghostsEatenDuringPower;
+      pushTrace(`Pac-Man comió Fantasma ${g.id} (+${GHOST_EAT_SCORE * ghostsEatenDuringPower})`);
+      respawnGhost(index);
+    } else {
+      finishGame(`CAPTURADO POR FANTASMA ${g.id}`);
+    }
+  });
+
+  return collision;
+}
+
+/* =========================================================
+   3. PERCEPCIONES
+   ========================================================= */
+
+function buildGhostPerception(ghostState, pacmanState) {
+  return {
+    rol: "fantasma",
+    pacman: {
+      x: pacmanState.x,
+      y: pacmanState.y,
+      direccionActual: pacmanState.dir,
+      poderActivo: isPowerActive()
+    },
+    agente: {
+      x: ghostState.x,
+      y: ghostState.y,
+      direccionActual: ghostState.dir
+    },
+    accionesLegales: getLegalActions(ghostState)
+  };
+}
+
+function buildPacmanPerception() {
+  return {
+    rol: "pacman",
+    agente: {
+      x: pacman.x,
+      y: pacman.y,
+      direccionActual: pacman.dir
+    },
+    accionesLegales: getLegalActions(pacman),
+    fantasmas: ghosts.map(g => ({ x: g.x, y: g.y, id: g.id })),
+    cerezas: [...cherries].map(k => {
+      const [x, y] = k.split(",").map(Number);
+      return { x, y };
+    }),
+    pellets: [...pellets],
+    poderActivo: isPowerActive()
+  };
+}
+
+function isPacmanVsModelMode() {
+  return mode === "duelo" || mode === "objetivos" || mode === "utilidad";
+}
+
+function pacmanAgentName() {
+  if (mode === "duelo") return "REFLEJO SIMPLE";
+  if (mode === "objetivos") return "BASADO EN OBJETIVOS";
+  if (mode === "utilidad") return "BASADO EN UTILIDAD";
+  return "AUTOMÁTICO";
+}
+
+/* =========================================================
+   4. AGENTE DE REFLEJO SIMPLE
+
+   Arquitectura separada y explícita:
+   agenteReflejo(percepcion)
+
+   No recibe estado interno ni consulta historial.
+   Decide únicamente con la percepción actual.
+   ========================================================= */
+
+function agenteReflejo(percepcion) {
+  // REFLEJO PARA PAC-MAN (usado en el modo VS).
+  if (percepcion.rol === "pacman") {
+    const legales = percepcion.accionesLegales;
+    if (legales.length === 0) return "NINGUNA";
+
+    let mejor = legales[0];
+    let mejorValor = -Infinity;
+
+    for (const accion of legales) {
+      const v = DIRS[accion];
+      const nx = percepcion.agente.x + v.x;
+      const ny = percepcion.agente.y + v.y;
+
+      const ghostDistances = percepcion.fantasmas.map(g =>
+        Math.abs(nx - g.x) + Math.abs(ny - g.y)
+      );
+      const nearestGhost = ghostDistances.length ? Math.min(...ghostDistances) : 99;
+
+      const cherryDistances = percepcion.cerezas.map(c =>
+        Math.abs(nx - c.x) + Math.abs(ny - c.y)
+      );
+      const nearestCherry = cherryDistances.length ? Math.min(...cherryDistances) : 99;
+
+      let valor;
+      if (percepcion.poderActivo) {
+        // Con poder, regla inmediata: acercarse al fantasma más cercano.
+        valor = -nearestGhost * 4;
+      } else {
+        // Sin poder, regla inmediata: maximizar seguridad y buscar cerezas.
+        valor = nearestGhost * 5 - nearestCherry * 0.8;
+      }
+
+      if (percepcion.pellets.includes(keyOf(nx, ny))) valor += 0.4;
+      if (percepcion.cerezas.some(c => c.x === nx && c.y === ny)) valor += 12;
+      if (accion === OPPOSITE[percepcion.agente.direccionActual]) valor -= 0.25;
+
+      if (valor > mejorValor) {
+        mejorValor = valor;
+        mejor = accion;
+      }
+    }
+    return mejor;
+  }
+
+  // REFLEJO PARA FANTASMA.
+  const dx = percepcion.pacman.x - percepcion.agente.x;
+  const dy = percepcion.pacman.y - percepcion.agente.y;
+  const legales = percepcion.accionesLegales;
+
+  if (legales.length === 0) return "NINGUNA";
+
+  // Si Pac-Man tiene poder, el fantasma huye usando solo el estado actual.
+  if (percepcion.pacman.poderActivo) {
+    let mejor = legales[0];
+    let mejorDistancia = -Infinity;
+    for (const accion of legales) {
+      const v = DIRS[accion];
+      const nx = percepcion.agente.x + v.x;
+      const ny = percepcion.agente.y + v.y;
+      const d = Math.abs(nx - percepcion.pacman.x) + Math.abs(ny - percepcion.pacman.y);
+      if (d > mejorDistancia) {
+        mejorDistancia = d;
+        mejor = accion;
+      }
+    }
+    return mejor;
+  }
+
+  if (Math.abs(dx) >= Math.abs(dy) && dx > 0 && legales.includes("DERECHA")) return "DERECHA";
+  if (Math.abs(dx) >= Math.abs(dy) && dx < 0 && legales.includes("IZQUIERDA")) return "IZQUIERDA";
+  if (Math.abs(dy) > Math.abs(dx) && dy > 0 && legales.includes("ABAJO")) return "ABAJO";
+  if (Math.abs(dy) > Math.abs(dx) && dy < 0 && legales.includes("ARRIBA")) return "ARRIBA";
+  if (dy > 0 && legales.includes("ABAJO")) return "ABAJO";
+  if (dy < 0 && legales.includes("ARRIBA")) return "ARRIBA";
+  if (dx > 0 && legales.includes("DERECHA")) return "DERECHA";
+  if (dx < 0 && legales.includes("IZQUIERDA")) return "IZQUIERDA";
+
+  let mejor = "NINGUNA";
+  let mejorDistancia = Infinity;
+
+  for (const accion of legales) {
+    const v = DIRS[accion];
+    const nx = percepcion.agente.x + v.x;
+    const ny = percepcion.agente.y + v.y;
+    const distancia = Math.abs(percepcion.pacman.x - nx) + Math.abs(percepcion.pacman.y - ny);
+    if (distancia < mejorDistancia) {
+      mejorDistancia = distancia;
+      mejor = accion;
+    }
+  }
+
+  return mejor;
+}
+
+/* =========================================================
+   5. AGENTE BASADO EN MODELO
+
+   Arquitectura separada y explícita:
+   agenteModelo(percepcion, estadoInterno)
+
+   Usa memoria del ciclo anterior para estimar hacia dónde va
+   Pac-Man y construir un objetivo futuro.
+   ========================================================= */
+
+function agenteModelo(percepcion, estadoInterno) {
+  const actual = { x: percepcion.pacman.x, y: percepcion.pacman.y };
+  let direccionEstimada = estadoInterno.direccionPreviaPacman || "NINGUNA";
+
+  if (estadoInterno.posicionAnteriorPacman) {
+    const dx = actual.x - estadoInterno.posicionAnteriorPacman.x;
+    const dy = actual.y - estadoInterno.posicionAnteriorPacman.y;
+    if (dx > 0) direccionEstimada = "DERECHA";
+    else if (dx < 0) direccionEstimada = "IZQUIERDA";
+    else if (dy > 0) direccionEstimada = "ABAJO";
+    else if (dy < 0) direccionEstimada = "ARRIBA";
+  }
+
+  if (direccionEstimada === "NINGUNA" && percepcion.pacman.direccionActual !== "NINGUNA") {
+    direccionEstimada = percepcion.pacman.direccionActual;
+  }
+
+  let objetivo;
+  let modoHuida = false;
+
+  if (percepcion.pacman.poderActivo) {
+    modoHuida = true;
+    objetivo = farthestWalkableCell(percepcion.pacman.x, percepcion.pacman.y);
+  } else {
+    const vector = DIRS[direccionEstimada] || DIRS.NINGUNA;
+    const objetivoCrudo = {
+      x: actual.x + vector.x * 4,
+      y: actual.y + vector.y * 4
+    };
+    objetivo = closestWalkableCell(objetivoCrudo.x, objetivoCrudo.y);
+  }
+
+  const accion = chooseActionByPath(
+    percepcion.agente,
+    percepcion.accionesLegales,
+    objetivo
+  );
+
+  const nuevoEstado = {
+    posicionAnteriorPacman: { x: actual.x, y: actual.y },
+    direccionPreviaPacman: direccionEstimada,
+    objetivoPredicho: { x: objetivo.x, y: objetivo.y },
+    modoHuida
+  };
+
+  return { accion, nuevoEstado };
+}
+
+/* =========================================================
+   6. AGENTE BASADO EN OBJETIVOS — PAC-MAN
+
+   Arquitectura separada y explícita:
+   agenteObjetivos(percepcion)
+
+   A diferencia del reflejo, primero selecciona una META y
+   después usa el mapa para escoger la acción que acerca a
+   Pac-Man a dicha meta.
+   ========================================================= */
+
+function agenteObjetivos(percepcion) {
+  const legales = percepcion.accionesLegales;
+  if (legales.length === 0) {
+    return { accion: "NINGUNA", objetivo: null, meta: "SIN ACCIONES" };
+  }
+
+  let objetivo = null;
+  let meta = "RECOGER PELLET";
+
+  // META 1: con poder, Pac-Man intenta capturar al fantasma más cercano.
+  if (percepcion.poderActivo && percepcion.fantasmas.length > 0) {
+    objetivo = nearestTargetByPath(percepcion.agente, percepcion.fantasmas);
+    meta = `COMER FANTASMA ${objetivo.id}`;
+  } else {
+    const ghostDistances = percepcion.fantasmas.map(g =>
+      Math.abs(percepcion.agente.x - g.x) + Math.abs(percepcion.agente.y - g.y)
+    );
+    const nearestGhost = ghostDistances.length ? Math.min(...ghostDistances) : 99;
+
+    // META 2: si un fantasma está demasiado cerca, la prioridad explícita es escapar.
+    if (nearestGhost <= 2 && percepcion.fantasmas.length > 0) {
+      objetivo = safestWalkableCell(percepcion.fantasmas);
+      meta = "ALEJARSE DE LOS FANTASMAS";
+    }
+    // META 3: si existen cerezas, llegar a la más cercana.
+    else if (percepcion.cerezas.length > 0) {
+      objetivo = nearestTargetByPath(percepcion.agente, percepcion.cerezas);
+      meta = "RECOGER CEREZA";
+    }
+    // META 4: si no hay cerezas, limpiar el pellet más cercano.
+    else if (percepcion.pellets.length > 0) {
+      const pelletTargets = percepcion.pellets.map(k => {
+        const [x, y] = k.split(",").map(Number);
+        return { x, y };
+      });
+      objetivo = nearestTargetByPath(percepcion.agente, pelletTargets);
+      meta = "RECOGER PELLET";
+    }
+  }
+
+  if (!objetivo) {
+    return { accion: legales[0], objetivo: null, meta };
+  }
+
+  const accion = chooseActionByPath(percepcion.agente, legales, objetivo);
+  return {
+    accion,
+    objetivo: { x: objetivo.x, y: objetivo.y },
+    meta
+  };
+}
+
+/* =========================================================
+   7. AGENTE BASADO EN UTILIDAD — PAC-MAN
+
+   Arquitectura separada y explícita:
+   agenteUtilidad(percepcion)
+
+   Evalúa cada acción legal con una FUNCIÓN DE UTILIDAD.
+   Combina seguridad, comida, cerezas, poder, cercanía a
+   fantasmas y continuidad del movimiento. Gana la acción
+   con mayor utilidad total.
+   ========================================================= */
+
+function agenteUtilidad(percepcion) {
+  const legales = percepcion.accionesLegales;
+  if (legales.length === 0) {
+    return { accion: "NINGUNA", utilidad: 0, detalle: "Sin acciones legales" };
+  }
+
+  let mejorAccion = legales[0];
+  let mejorUtilidad = -Infinity;
+  let mejorDetalle = "";
+
+  for (const accion of legales) {
+    const v = DIRS[accion];
+    const nx = percepcion.agente.x + v.x;
+    const ny = percepcion.agente.y + v.y;
+
+    const ghostDistances = percepcion.fantasmas.map(g =>
+      Math.abs(nx - g.x) + Math.abs(ny - g.y)
+    );
+    const nearestGhost = ghostDistances.length ? Math.min(...ghostDistances) : 99;
+
+    const cherryDistances = percepcion.cerezas.map(c =>
+      Math.abs(nx - c.x) + Math.abs(ny - c.y)
+    );
+    const nearestCherry = cherryDistances.length ? Math.min(...cherryDistances) : 99;
+
+    const pelletTargets = percepcion.pellets.map(k => {
+      const [px, py] = k.split(",").map(Number);
+      return Math.abs(nx - px) + Math.abs(ny - py);
+    });
+    const nearestPellet = pelletTargets.length ? Math.min(...pelletTargets) : 0;
+
+    let utilidad = 0;
+    const partes = [];
+
+    if (percepcion.poderActivo) {
+      // Con poder, acercarse a fantasmas es valioso.
+      const caza = Math.max(0, 14 - nearestGhost * 2.2);
+      utilidad += caza;
+      partes.push(`caza +${caza.toFixed(1)}`);
+    } else {
+      // Sin poder, mantener distancia es lo más importante.
+      const seguridad = Math.min(nearestGhost, 8) * 4;
+      utilidad += seguridad;
+      partes.push(`seguridad +${seguridad.toFixed(1)}`);
+
+      if (nearestGhost <= 1) {
+        utilidad -= 120;
+        partes.push("peligro -120");
+      } else if (nearestGhost === 2) {
+        utilidad -= 30;
+        partes.push("riesgo -30");
+      }
+    }
+
+    if (percepcion.pellets.includes(keyOf(nx, ny))) {
+      utilidad += 8;
+      partes.push("pellet +8");
+    }
+
+    if (percepcion.cerezas.some(c => c.x === nx && c.y === ny)) {
+      utilidad += percepcion.poderActivo ? 4 : 45;
+      partes.push(percepcion.poderActivo ? "cereza +4" : "cereza +45");
+    } else if (!percepcion.poderActivo && percepcion.cerezas.length > 0) {
+      const acercarseCereza = Math.max(0, 7 - nearestCherry) * 1.2;
+      utilidad += acercarseCereza;
+      partes.push(`cereza futura +${acercarseCereza.toFixed(1)}`);
+    }
+
+    const comidaFutura = Math.max(0, 5 - nearestPellet) * 0.7;
+    utilidad += comidaFutura;
+    partes.push(`comida futura +${comidaFutura.toFixed(1)}`);
+
+    if (accion === OPPOSITE[percepcion.agente.direccionActual]) {
+      utilidad -= 1.5;
+      partes.push("reversa -1.5");
+    } else if (accion === percepcion.agente.direccionActual) {
+      utilidad += 0.8;
+      partes.push("continuidad +0.8");
+    }
+
+    if (utilidad > mejorUtilidad) {
+      mejorUtilidad = utilidad;
+      mejorAccion = accion;
+      mejorDetalle = partes.join(" · ");
+    }
+  }
+
+  return {
+    accion: mejorAccion,
+    utilidad: mejorUtilidad,
+    detalle: mejorDetalle
+  };
+}
+
+/* =========================================================
+   8. APOYO PARA AGENTES DE OBJETIVOS / MODELO
+   ========================================================= */
+
+function nearestTargetByPath(origin, targets) {
+  let best = null;
+  let bestDistance = Infinity;
+
+  for (const target of targets) {
+    const distance = bfsDistance(origin.x, origin.y, target.x, target.y);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = target;
+    }
+  }
+  return best;
+}
+
+function safestWalkableCell(ghostStates) {
+  let best = { x: pacman.x, y: pacman.y };
+  let bestSafety = -Infinity;
+
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (!isWalkable(x, y)) continue;
+      const safety = ghostStates.length
+        ? Math.min(...ghostStates.map(g => Math.abs(x - g.x) + Math.abs(y - g.y)))
+        : 99;
+      if (safety > bestSafety) {
+        bestSafety = safety;
+        best = { x, y };
+      }
+    }
+  }
+  return best;
+}
+
+/* =========================================================
+   9. APOYO PARA EL AGENTE BASADO EN MODELO
+   ========================================================= */
+
+function closestWalkableCell(targetX, targetY) {
+  let best = { x: 1, y: 1 };
+  let bestDistance = Infinity;
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (!isWalkable(x, y)) continue;
+      const d = Math.abs(x - targetX) + Math.abs(y - targetY);
+      if (d < bestDistance) {
+        bestDistance = d;
+        best = { x, y };
+      }
+    }
+  }
+  return best;
+}
+
+function farthestWalkableCell(fromX, fromY) {
+  let best = { x: fromX, y: fromY };
+  let bestDistance = -Infinity;
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (!isWalkable(x, y)) continue;
+      const d = bfsDistance(fromX, fromY, x, y);
+      if (Number.isFinite(d) && d > bestDistance) {
+        bestDistance = d;
+        best = { x, y };
+      }
+    }
+  }
+  return best;
+}
+
+function bfsDistance(startX, startY, targetX, targetY) {
+  if (startX === targetX && startY === targetY) return 0;
+  const queue = [{ x: startX, y: startY, d: 0 }];
+  const visited = new Set([keyOf(startX, startY)]);
+  let index = 0;
+
+  while (index < queue.length) {
+    const current = queue[index++];
+    for (const dir of DIR_ORDER) {
+      const v = DIRS[dir];
+      const nx = current.x + v.x;
+      const ny = current.y + v.y;
+      const k = keyOf(nx, ny);
+      if (!isWalkable(nx, ny) || visited.has(k)) continue;
+      if (nx === targetX && ny === targetY) return current.d + 1;
+      visited.add(k);
+      queue.push({ x: nx, y: ny, d: current.d + 1 });
+    }
+  }
+  return Infinity;
+}
+
+function chooseActionByPath(agentState, legalActions, target) {
+  let bestAction = "NINGUNA";
+  let bestDistance = Infinity;
+
+  for (const action of legalActions) {
+    const v = DIRS[action];
+    const nx = agentState.x + v.x;
+    const ny = agentState.y + v.y;
+    const distance = bfsDistance(nx, ny, target.x, target.y);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestAction = action;
+    }
+  }
+  return bestAction;
+}
+
+/* =========================================================
+   10. CICLO DE JUEGO EN TIEMPO REAL
+   ========================================================= */
+
+function update(deltaMs) {
+  if (gamePhase !== "RUNNING") return;
+
+  survivalSeconds = (performance.now() - startTime) / 1000;
+  pacAccumulator += deltaMs;
+  ghostAccumulator += deltaMs;
+
+  const sp = currentSpeed();
+
+  if (pacAccumulator >= sp.pac) {
+    pacAccumulator %= sp.pac;
+
+    if (mode === "manual") updatePacmanManual();
+    else if (mode === "duelo") updatePacmanReflejo();
+    else if (mode === "objetivos") updatePacmanObjetivos();
+    else if (mode === "utilidad") updatePacmanUtilidad();
+    else updatePacmanAutomatico();
+  }
+
+  if (gamePhase === "RUNNING" && ghostAccumulator >= sp.ghost) {
+    ghostAccumulator %= sp.ghost;
+    updateGhosts();
+  }
+
+  updateGameStats();
+}
+
+function updatePacmanManual() {
+  if (pacman.nextDir !== "NINGUNA") {
+    const v = DIRS[pacman.nextDir];
+    if (isWalkable(pacman.x + v.x, pacman.y + v.y)) pacman.dir = pacman.nextDir;
+  }
+
+  if (pacman.dir !== "NINGUNA") {
+    moveEntity(pacman, pacman.dir);
+    collectItems();
+  }
+  handleGhostCollisions();
+}
+
+function chooseAutomaticPacmanAction() {
+  let legales = getLegalActions(pacman);
+  if (legales.length === 0) return "NINGUNA";
+
+  const reversa = OPPOSITE[pacman.dir];
+  const sinReversa = legales.filter(a => a !== reversa);
+  if (sinReversa.length > 0) legales = sinReversa;
+
+  let mejorAccion = legales[0];
+  let mejorValor = -Infinity;
+
+  for (const accion of legales) {
+    const v = DIRS[accion];
+    const nx = pacman.x + v.x;
+    const ny = pacman.y + v.y;
+    const distances = ghosts.map(g => Math.abs(nx - g.x) + Math.abs(ny - g.y));
+    const nearestGhost = distances.length ? Math.min(...distances) : 99;
+    const cherryDistances = [...cherries].map(k => {
+      const [cx, cy] = k.split(",").map(Number);
+      return Math.abs(nx - cx) + Math.abs(ny - cy);
+    });
+    const nearestCherry = cherryDistances.length ? Math.min(...cherryDistances) : 99;
+
+    let valor = isPowerActive() ? -nearestGhost * 3 : nearestGhost * 3 - nearestCherry * 0.25;
+    if (pellets.has(keyOf(nx, ny))) valor += 0.4;
+    if (cherries.has(keyOf(nx, ny))) valor += 7;
+    valor += Math.random() * 0.05;
+
+    if (valor > mejorValor) {
+      mejorValor = valor;
+      mejorAccion = accion;
+    }
+  }
+
+  return mejorAccion;
+}
+
+function updatePacmanAutomatico() {
+  const accion = chooseAutomaticPacmanAction();
+  pacman.dir = accion;
+  pacman.nextDir = accion;
+  if (accion !== "NINGUNA") {
+    moveEntity(pacman, accion);
+    collectItems();
+  }
+  handleGhostCollisions();
+}
+
+function updatePacmanReflejo() {
+  const perception = buildPacmanPerception();
+  const accion = agenteReflejo(perception);
+  pacman.dir = accion;
+  pacman.nextDir = accion;
+
+  if (accion !== "NINGUNA") {
+    moveEntity(pacman, accion);
+    collectItems();
+  }
+
+  lastPerceptionText =
+    `PAC-MAN (REFLEJO)\n` +
+    `Posición: (${perception.agente.x}, ${perception.agente.y})\n` +
+    `Acciones legales: ${perception.accionesLegales.join(", ")}\n` +
+    `Fantasmas percibidos: ${perception.fantasmas.length}\n` +
+    `Poder activo: ${perception.poderActivo ? "SÍ" : "NO"}`;
+  lastAction = `PAC-MAN: ${accion}`;
+  lastPacmanStateText =
+    "ARQUITECTURA: REFLEJO SIMPLE\n" +
+    "Estado interno: NO\n" +
+    "Criterio: reaccionar únicamente a la percepción actual.";
+  lastStateText = lastPacmanStateText;
+  pushTrace(`Pac-Man reflejo: ${accion}`);
+  handleGhostCollisions();
+}
+
+function updatePacmanObjetivos() {
+  const perception = buildPacmanPerception();
+  const result = agenteObjetivos(perception);
+  const accion = result.accion;
+
+  pacman.dir = accion;
+  pacman.nextDir = accion;
+  if (accion !== "NINGUNA") {
+    moveEntity(pacman, accion);
+    collectItems();
+  }
+
+  const target = result.objetivo ? `(${result.objetivo.x}, ${result.objetivo.y})` : "sin objetivo";
+  lastPerceptionText =
+    `PAC-MAN (OBJETIVOS)\n` +
+    `Posición: (${perception.agente.x}, ${perception.agente.y})\n` +
+    `Acciones legales: ${perception.accionesLegales.join(", ")}\n` +
+    `Fantasmas percibidos: ${perception.fantasmas.length}\n` +
+    `Poder activo: ${perception.poderActivo ? "SÍ" : "NO"}`;
+  lastAction = `PAC-MAN: ${accion}`;
+  lastPacmanStateText =
+    `ARQUITECTURA: BASADA EN OBJETIVOS\n` +
+    `Meta actual: ${result.meta}\n` +
+    `Objetivo elegido: ${target}\n` +
+    `Plan: escoger por ruta la acción que acerca al objetivo.`;
+  lastStateText = lastPacmanStateText;
+  pushTrace(`Pac-Man objetivos | ${result.meta}: ${accion}`);
+  handleGhostCollisions();
+}
+
+function updatePacmanUtilidad() {
+  const perception = buildPacmanPerception();
+  const result = agenteUtilidad(perception);
+  const accion = result.accion;
+
+  pacman.dir = accion;
+  pacman.nextDir = accion;
+  if (accion !== "NINGUNA") {
+    moveEntity(pacman, accion);
+    collectItems();
+  }
+
+  lastPerceptionText =
+    `PAC-MAN (UTILIDAD)\n` +
+    `Posición: (${perception.agente.x}, ${perception.agente.y})\n` +
+    `Acciones legales: ${perception.accionesLegales.join(", ")}\n` +
+    `Fantasmas percibidos: ${perception.fantasmas.length}\n` +
+    `Poder activo: ${perception.poderActivo ? "SÍ" : "NO"}`;
+  lastAction = `PAC-MAN: ${accion}`;
+  lastPacmanStateText =
+    `ARQUITECTURA: BASADA EN UTILIDAD\n` +
+    `Utilidad elegida: ${result.utilidad.toFixed(2)}\n` +
+    `Evaluación: ${result.detalle}\n` +
+    `Criterio: maximizar el valor esperado del siguiente estado.`;
+  lastStateText = lastPacmanStateText;
+  pushTrace(`Pac-Man utilidad | ${accion} | U=${result.utilidad.toFixed(2)}`);
+  handleGhostCollisions();
+}
+
+function updateGhosts() {
+  if (gamePhase !== "RUNNING") return;
+
+  const actions = [];
+  const stateLines = [];
+
+  ghosts.forEach((g, index) => {
+    const perception = buildGhostPerception(g, pacman);
+    let action = "NINGUNA";
+    let architecture = "REFLEJO";
+
+    if (mode === "modelo" || isPacmanVsModelMode() || (mode === "manual" && index % 2 === 1)) {
+      architecture = "MODELO";
+      const previousState = JSON.parse(JSON.stringify(modelStates[index]));
+      const result = agenteModelo(perception, modelStates[index]);
+      modelStates[index] = result.nuevoEstado;
+      action = result.accion;
+
+      const prev = previousState.posicionAnteriorPacman;
+      const target = modelStates[index].objetivoPredicho;
+      stateLines.push(
+        `F${g.id} MODELO: anterior ${prev ? `(${prev.x},${prev.y})` : "sin dato"} · ` +
+        `objetivo (${target.x},${target.y}) · ${modelStates[index].modoHuida ? "HUYENDO" : "PERSIGUIENDO"}`
+      );
+    } else {
+      action = agenteReflejo(perception);
+      stateLines.push(`F${g.id} REFLEJO: sin memoria · ${isPowerActive() ? "HUYENDO" : "PERSIGUIENDO"}`);
+    }
+
+    moveEntity(g, action);
+    actions.push(`F${g.id} ${architecture}:${action}`);
+    handleGhostCollisions();
+  });
+
+  if (!isPacmanVsModelMode()) {
+    const sample = ghosts[0] ? buildGhostPerception(ghosts[0], pacman) : null;
+    if (sample) {
+      lastPerceptionText =
+        `FANTASMA 1\n` +
+        `Pac-Man: (${sample.pacman.x}, ${sample.pacman.y})\n` +
+        `Fantasma: (${sample.agente.x}, ${sample.agente.y})\n` +
+        `Acciones legales: ${sample.accionesLegales.join(", ")}\n` +
+        `Pac-Man con poder: ${sample.pacman.poderActivo ? "SÍ" : "NO"}`;
+    }
+  } else {
+    lastPerceptionText += `\nFantasmas basados en modelo: ${ghosts.length}`;
+  }
+
+  lastAction = isPacmanVsModelMode()
+    ? `${lastAction} | ${actions.join(" | ")}`
+    : actions.join(" | ");
+
+  if (isPacmanVsModelMode()) {
+    const pacState = lastPacmanStateText
+      ? lastPacmanStateText
+      : `PAC-MAN: ${pacmanAgentName()}`;
+    lastStateText =
+      `${pacState}\n\nFANTASMAS: BASADOS EN MODELO\n` +
+      `Color de fantasmas: AZUL\n` +
+      stateLines.join("\n");
+  } else {
+    lastStateText = stateLines.join("\n");
+  }
+
+  pushTrace(actions.join(" | "));
+  updatePanel();
+}
+
+function loop(now) {
+  const delta = Math.min(50, now - lastFrame);
+  lastFrame = now;
+  update(delta);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* =========================================================
+   11. PANEL DE ESTADO
+   ========================================================= */
+
+function updatePanel() {
+  perceptionEl.textContent = lastPerceptionText || "Sin percepción todavía.";
+  internalStateEl.textContent = lastStateText || "No aplica.";
+  actionEl.textContent = lastAction || "NINGUNA";
+  renderTrace();
+  updateGameStats();
+}
+
+function updateGameStats() {
+  if (!gameStatsEl) return;
+  const diff = DIFFICULTIES[difficulty];
+  const power = isPowerActive() ? `${powerSecondsRemaining().toFixed(1)} s` : "inactivo";
+  gameStatsEl.textContent =
+    `Velocidad: ${currentSpeed().label}\n` +
+    `Dificultad: ${diff.label} · ${diff.ghosts} fantasma${diff.ghosts > 1 ? "s" : ""}\n` +
+    `Cerezas restantes: ${cherries ? cherries.size : 2}\n` +
+    `Poder: ${power}`;
+}
+
+function ghostColorForMode(index) {
+  if (isPowerActive()) {
+    const remaining = powerSecondsRemaining();
+    if (remaining < 2 && Math.floor(performance.now() / 180) % 2 === 0) return "#ffffff";
+    return "#315dff";
+  }
+  if (isPacmanVsModelMode()) return "#2f7cff";
+  if (mode === "reflejo") return "#ff4f68";
+  if (mode === "modelo") return "#ff7bc8";
+  return index % 2 === 0 ? "#ff4f68" : "#ff7bc8";
+}
+
+function renderLegend() {
+  if (!legendEl) return;
+  let html = `<span><i class="dot" style="background:#ffd84d"></i>Pac-Man</span>`;
+  ghosts.forEach((g, i) => {
+    html += `<span><i class="dot" style="background:${ghostColorForMode(i)}"></i>Fantasma ${g.id}</span>`;
+  });
+  html += `<span><i class="dot" style="background:#ff3355"></i>Cereza / poder</span>`;
+  legendEl.innerHTML = html;
+}
+
+function updatePanelForMode() {
+  actionEl.textContent = "NINGUNA";
+  renderLegend();
+  updateGameStats();
+
+  if (mode === "manual") {
+    perceptionEl.textContent = "Inicia la partida. Pac-Man será controlado con el teclado.";
+    internalStateEl.textContent =
+      "MANUAL:\n- Tú controlas a Pac-Man.\n- Fantasmas impares: reflejo simple.\n- Fantasmas pares: basado en modelo.\n- Las cerezas activan poder durante 8 s.";
+    modeHelpEl.textContent = "Manual: flechas para Pac-Man. Con una cereza los fantasmas huyen y pueden ser comidos temporalmente.";
+  } else if (mode === "reflejo") {
+    perceptionEl.textContent = "Inicia la partida para observar la percepción de los fantasmas.";
+    internalStateEl.textContent =
+      "REFLEJO:\n- Pac-Man se mueve automáticamente.\n- Todos los fantasmas usan agenteReflejo(percepcion).\n- No almacenan memoria histórica.";
+    modeHelpEl.textContent = "Reflejo: los fantasmas reaccionan solo al estado actual; con poder cambian inmediatamente a una regla de huida.";
+  } else if (mode === "modelo") {
+    perceptionEl.textContent = "Inicia la partida para observar la percepción y el estado interno.";
+    internalStateEl.textContent =
+      "MODELO:\n- Pac-Man se mueve automáticamente.\n- Todos los fantasmas usan agenteModelo(percepcion, estadoInterno).\n- Cada fantasma mantiene su propio historial y objetivo.";
+    modeHelpEl.textContent = "Modelo: los fantasmas anticipan la dirección de Pac-Man y, durante el poder, usan su modelo para buscar una zona lejana.";
+  } else if (mode === "duelo") {
+    perceptionEl.textContent = "Inicia el duelo: Pac-Man será el agente de reflejo y los fantasmas serán agentes basados en modelo.";
+    internalStateEl.textContent =
+      "VS DE AGENTES:\n- Pac-Man = agente REFLEJO SIMPLE.\n- Fantasmas azules = agentes BASADOS EN MODELO.\n- Pac-Man no tiene memoria.\n- Los fantasmas sí conservan estado interno.";
+    modeHelpEl.textContent = "VS: Pac-Man reflejo (amarillo) contra fantasmas modelo (azules). La cereza invierte temporalmente la relación cazador/presa.";
+  } else if (mode === "objetivos") {
+    perceptionEl.textContent = "Inicia la partida: Pac-Man seleccionará una meta explícita antes de actuar.";
+    internalStateEl.textContent =
+      "OBJETIVOS VS MODELO:\n- Pac-Man = agente BASADO EN OBJETIVOS.\n- Elige una meta: escapar, cereza, pellet o capturar fantasma.\n- Planifica una ruta hacia esa meta.\n- Fantasmas azules = BASADOS EN MODELO.";
+    modeHelpEl.textContent = "Objetivos: Pac-Man decide primero qué quiere conseguir y luego busca una ruta para cumplir esa meta.";
+  } else if (mode === "utilidad") {
+    perceptionEl.textContent = "Inicia la partida: Pac-Man calculará la utilidad de cada acción legal.";
+    internalStateEl.textContent =
+      "UTILIDAD VS MODELO:\n- Pac-Man = agente BASADO EN UTILIDAD.\n- Asigna valor a seguridad, cerezas, pellets, poder y riesgo.\n- Escoge la acción con mayor utilidad total.\n- Fantasmas azules = BASADOS EN MODELO.";
+    modeHelpEl.textContent = "Utilidad: Pac-Man compara alternativas y elige la acción que produce el estado más conveniente según su función de utilidad.";
+  }
+
+  traceEl.innerHTML = "<li>Sin decisiones todavía.</li>";
+}
+
+function pushTrace(text) {
+  decisionTrace.unshift(text);
+  decisionTrace = decisionTrace.slice(0, 5);
+}
+
+function renderTrace() {
+  if (decisionTrace.length === 0) {
+    traceEl.innerHTML = "<li>Sin decisiones todavía.</li>";
+    return;
+  }
+  traceEl.innerHTML = "";
+  for (const item of decisionTrace) {
+    const li = document.createElement("li");
+    li.textContent = item;
+    traceEl.appendChild(li);
+  }
+}
+
+/* =========================================================
+   12. RENDERIZADO EN CANVAS
+   ========================================================= */
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#02020a";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawMaze();
+  drawPellets();
+  drawCherries();
+  drawPacman();
+  drawGhosts();
+  drawHUD();
+  renderLegend();
+
+  if (gamePhase === "START") {
+    const overlayTitle =
+      mode === "duelo" ? "REFLEJO VS MODELO" :
+      mode === "objetivos" ? "OBJETIVOS VS MODELO" :
+      mode === "utilidad" ? "UTILIDAD VS MODELO" :
+      "PAC-MAN: AGENTES IA";
+
+    const overlaySubtitle =
+      mode === "manual"
+        ? "Flechas: mover Pac-Man | ENTER: iniciar\nCome una cereza para poder comer fantasmas durante 8 s."
+        : mode === "duelo"
+          ? "Pac-Man = REFLEJO | Fantasmas azules = MODELO\nENTER: iniciar | Cerezas = poder temporal"
+          : mode === "objetivos"
+            ? "Pac-Man = OBJETIVOS | Fantasmas azules = MODELO\nENTER: iniciar | Meta explícita + planificación"
+            : mode === "utilidad"
+              ? "Pac-Man = UTILIDAD | Fantasmas azules = MODELO\nENTER: iniciar | Evalúa y maximiza utilidad"
+              : "ENTER: iniciar\nPac-Man y los fantasmas se mueven automáticamente.";
+
+    drawOverlay(overlayTitle, overlaySubtitle);
+  }
+
+  if (gamePhase === "GAMEOVER") {
+    drawOverlay(
+      gameOverMessage,
+      `Puntaje: ${score} | Tiempo: ${survivalSeconds.toFixed(1)} s\nPresiona ENTER o el botón para reiniciar.`
+    );
+  }
+}
+
+function drawMaze() {
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (MAZE[y][x] !== "#") continue;
+      const px = x * CELL;
+      const py = y * CELL;
+      ctx.fillStyle = "#111a4c";
+      ctx.fillRect(px, py, CELL, CELL);
+      ctx.strokeStyle = "#4f68ff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px + 3, py + 3, CELL - 6, CELL - 6);
+    }
+  }
+}
+
+function drawPellets() {
+  ctx.fillStyle = "#8cf7ff";
+  for (const key of pellets) {
+    const [x, y] = key.split(",").map(Number);
+    ctx.beginPath();
+    ctx.arc(x * CELL + CELL / 2, y * CELL + CELL / 2, 3.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawCherries() {
+  for (const key of cherries) {
+    const [x, y] = key.split(",").map(Number);
+    const cx = x * CELL + CELL / 2;
+    const cy = y * CELL + CELL / 2;
+
+    ctx.strokeStyle = "#62e875";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 1);
+    ctx.quadraticCurveTo(cx + 2, cy - 10, cx + 8, cy - 11);
+    ctx.stroke();
+
+    ctx.fillStyle = "#ff3355";
+    ctx.beginPath();
+    ctx.arc(cx - 4, cy + 3, 5, 0, Math.PI * 2);
+    ctx.arc(cx + 4, cy + 3, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawPacman() {
+  const cx = pacman.x * CELL + CELL / 2;
+  const cy = pacman.y * CELL + CELL / 2;
+  const radius = isPowerActive() ? 12.5 : 11;
+  let angle = 0;
+  if (pacman.dir === "ABAJO") angle = Math.PI / 2;
+  if (pacman.dir === "IZQUIERDA") angle = Math.PI;
+  if (pacman.dir === "ARRIBA") angle = -Math.PI / 2;
+  const mouth = 0.35;
+
+  if (isPowerActive()) {
+    ctx.shadowColor = "#ffd84d";
+    ctx.shadowBlur = 15;
+  }
+  ctx.fillStyle = "#ffd84d";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, radius, angle + mouth, angle + Math.PI * 2 - mouth);
+  ctx.closePath();
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function drawGhostShape(entity, color) {
+  const cx = entity.x * CELL + CELL / 2;
+  const cy = entity.y * CELL + CELL / 2;
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy - 2, 11, Math.PI, 0);
+  ctx.lineTo(cx + 11, cy + 10);
+  ctx.lineTo(cx + 5, cy + 6);
+  ctx.lineTo(cx, cy + 10);
+  ctx.lineTo(cx - 5, cy + 6);
+  ctx.lineTo(cx - 11, cy + 10);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(cx - 4, cy - 3, 3, 0, Math.PI * 2);
+  ctx.arc(cx + 4, cy - 3, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = isPowerActive() ? "#ffffff" : "#17245f";
+  ctx.beginPath();
+  ctx.arc(cx - 3, cy - 3, 1.4, 0, Math.PI * 2);
+  ctx.arc(cx + 5, cy - 3, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawGhosts() {
+  ghosts.forEach((g, index) => drawGhostShape(g, ghostColorForMode(index)));
+}
+
+function drawHUD() {
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,.80)";
+  ctx.fillRect(8, 8, 385, 67);
+
+  ctx.font = "bold 13px Courier New";
+  ctx.fillStyle = "#ffd84d";
+  ctx.fillText(`PUNTAJE ${String(score).padStart(4, "0")}`, 18, 27);
+
+  const time = gamePhase === "RUNNING" ? ((performance.now() - startTime) / 1000) : survivalSeconds;
+  ctx.fillStyle = "#d8ddff";
+  ctx.fillText(`TIEMPO ${time.toFixed(1)}s`, 18, 46);
+  ctx.fillText(`${currentSpeed().label.toUpperCase()} · ${DIFFICULTIES[difficulty].label.toUpperCase()} · ${ghosts.length} F`, 18, 65);
+
+  if (isPowerActive()) {
+    ctx.fillStyle = "#50e3ff";
+    ctx.fillText(`PODER ${powerSecondsRemaining().toFixed(1)}s`, 210, 27);
+  }
+
+  ctx.textAlign = "right";
+  ctx.fillStyle = isPacmanVsModelMode() ? "#50a2ff" : "#e7ebff";
+  const label =
+    mode === "manual" ? "MANUAL" :
+    mode === "reflejo" ? "FANTASMAS REFLEJO" :
+    mode === "modelo" ? "FANTASMAS MODELO" :
+    mode === "duelo" ? "REFLEJO VS MODELO" :
+    mode === "objetivos" ? "OBJETIVOS VS MODELO" :
+    "UTILIDAD VS MODELO";
+  ctx.fillText(label, canvas.width - 14, 27);
+  ctx.restore();
+}
+
+function drawOverlay(title, subtitle) {
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,.80)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.textAlign = "center";
+  ctx.font = "bold 26px Courier New";
+  ctx.fillStyle = "#ffd84d";
+  ctx.fillText(title, canvas.width / 2, 202);
+  ctx.font = "14px Courier New";
+  ctx.fillStyle = "#e7ebff";
+  subtitle.split("\n").forEach((line, index) => {
+    ctx.fillText(line, canvas.width / 2, 242 + index * 24);
+  });
+  ctx.restore();
+}
+
+/* =========================================================
+   13. EXPERIMENTO ACELERADO DE 20 PARTIDAS POR AGENTE
+   ========================================================= */
+
+function seededRandom(seed) {
+  let s = seed >>> 0;
+  return function() {
+    s += 0x6D2B79F5;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function chooseAutopilotPacmanAction(pac, pursuer, rng) {
+  let legal = getLegalActions(pac);
+  if (legal.length === 0) return "NINGUNA";
+  const reverse = OPPOSITE[pac.dir];
+  const withoutReverse = legal.filter(a => a !== reverse);
+  if (withoutReverse.length > 0) legal = withoutReverse;
+
+  let bestScore = -Infinity;
+  let bestActions = [];
+  for (const action of legal) {
+    const v = DIRS[action];
+    const nx = pac.x + v.x;
+    const ny = pac.y + v.y;
+    const distance = Math.abs(nx - pursuer.x) + Math.abs(ny - pursuer.y);
+    const value = distance + rng() * 0.20;
+    if (value > bestScore + 1e-9) {
+      bestScore = value;
+      bestActions = [action];
+    } else if (Math.abs(value - bestScore) < 1e-9) {
+      bestActions.push(action);
+    }
+  }
+  return bestActions[Math.floor(rng() * bestActions.length)];
+}
+
+function simulateOne(agentType, seed) {
+  const rng = seededRandom(seed);
+  const simPac = { x: 1, y: 1, dir: "DERECHA" };
+  const simGhost = { x: 18, y: 13, dir: "IZQUIERDA" };
+  const simPellets = createPellets();
+  let simScore = 0;
+  let simState = initialModelState();
+  const MAX_TICKS = 400;
+  const SECONDS_PER_TICK = 0.15;
+
+  for (let tick = 0; tick < MAX_TICKS; tick++) {
+    const pacAction = chooseAutopilotPacmanAction(simPac, simGhost, rng);
+    moveEntity(simPac, pacAction);
+    const pelletKey = keyOf(simPac.x, simPac.y);
+    if (simPellets.has(pelletKey)) {
+      simPellets.delete(pelletKey);
+      simScore += 10;
+    }
+    if (sameCell(simPac, simGhost)) {
+      return { score: simScore, survival: (tick + 1) * SECONDS_PER_TICK, captured: true };
+    }
+
+    const perception = {
+      rol: "fantasma",
+      pacman: { x: simPac.x, y: simPac.y, direccionActual: simPac.dir, poderActivo: false },
+      agente: { x: simGhost.x, y: simGhost.y, direccionActual: simGhost.dir },
+      accionesLegales: getLegalActions(simGhost)
+    };
+
+    let ghostAction;
+    if (agentType === "reflejo") ghostAction = agenteReflejo(perception);
+    else {
+      const result = agenteModelo(perception, simState);
+      ghostAction = result.accion;
+      simState = result.nuevoEstado;
+    }
+
+    moveEntity(simGhost, ghostAction);
+    if (sameCell(simPac, simGhost)) {
+      return { score: simScore, survival: (tick + 1) * SECONDS_PER_TICK, captured: true };
+    }
+    if (simPellets.size === 0) {
+      return { score: simScore, survival: (tick + 1) * SECONDS_PER_TICK, captured: false };
+    }
+  }
+
+  return { score: simScore, survival: MAX_TICKS * SECONDS_PER_TICK, captured: false };
+}
+
+function mean(values) {
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+function standardDeviation(values) {
+  const m = mean(values);
+  const variance = values.reduce((sum, value) => sum + Math.pow(value - m, 2), 0) / values.length;
+  return Math.sqrt(variance);
+}
+
+function runAgentBatch(agentType, n = 20) {
+  const runs = [];
+  for (let i = 0; i < n; i++) runs.push(simulateOne(agentType, 20260824 + i * 97));
+  const scores = runs.map(r => r.score);
+  const survivals = runs.map(r => r.survival);
+  return {
+    n,
+    scoreMean: mean(scores),
+    scoreSd: standardDeviation(scores),
+    survivalMean: mean(survivals),
+    captures: runs.filter(r => r.captured).length
+  };
+}
+
+function runExperiment() {
+  experimentStatus.textContent = "Ejecutando 40 simulaciones aceleradas...";
+  setTimeout(() => {
+    const reflection = runAgentBatch("reflejo", 20);
+    const model = runAgentBatch("modelo", 20);
+
+    resultsBody.innerHTML = `
+      <tr>
+        <td>Fantasma — Reflejo simple</td>
+        <td>${reflection.n}</td>
+        <td>${reflection.scoreMean.toFixed(2)}</td>
+        <td>${reflection.scoreSd.toFixed(2)}</td>
+        <td>${reflection.survivalMean.toFixed(2)}</td>
+        <td>${reflection.captures}/20</td>
+      </tr>
+      <tr>
+        <td>Fantasma — Basado en modelo</td>
+        <td>${model.n}</td>
+        <td>${model.scoreMean.toFixed(2)}</td>
+        <td>${model.scoreSd.toFixed(2)}</td>
+        <td>${model.survivalMean.toFixed(2)}</td>
+        <td>${model.captures}/20</td>
+      </tr>`;
+
+    experimentStatus.textContent =
+      "Experimento terminado. Menor puntaje y menor supervivencia de Pac-Man indican una persecución más efectiva.";
+  }, 50);
+}
+
+/* =========================================================
+   14. EVENTOS DE TECLADO E INTERFAZ
+   ========================================================= */
+
+document.addEventListener("keydown", event => {
+  const map = {
+    ArrowUp: "ARRIBA",
+    ArrowDown: "ABAJO",
+    ArrowLeft: "IZQUIERDA",
+    ArrowRight: "DERECHA"
+  };
+
+  if (map[event.key] && mode === "manual") {
+    event.preventDefault();
+    pacman.nextDir = map[event.key];
+  }
+
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    if (gamePhase !== "RUNNING") startGame();
+  }
+});
+
+modeSelect.addEventListener("change", () => {
+  mode = modeSelect.value;
+  resetGame();
+});
+
+speedSelect.addEventListener("change", () => {
+  speedKey = speedSelect.value;
+  resetGame();
+});
+
+difficultySelect.addEventListener("change", () => {
+  difficulty = Number(difficultySelect.value);
+  resetGame();
+});
+
+startBtn.addEventListener("click", startGame);
+experimentBtn.addEventListener("click", runExperiment);
+
+/* =========================================================
+   15. INICIO
+   ========================================================= */
+
+resetGame();
+requestAnimationFrame(loop);
+
+</script>
+
+
+</body>
+</html>
